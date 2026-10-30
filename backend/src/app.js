@@ -13,12 +13,41 @@ import dashboardRoutes from './routes/dashboard.routes.js';
 export const app = express();
 
 // Middlewares
+const allowedOrigins = (env.CORS_ORIGIN || '')
+  .split(',')
+  .map((o) => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
 app.use(cors({
-  origin: env.CORS_ORIGIN || '*',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const cleanOrigin = origin.replace(/\/$/, '');
+    if (
+      allowedOrigins.length === 0 ||
+      allowedOrigins.includes('*') ||
+      allowedOrigins.includes(cleanOrigin) ||
+      cleanOrigin.endsWith('.netlify.app') ||
+      cleanOrigin.endsWith('.vercel.app') ||
+      cleanOrigin.includes('localhost')
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
 }));
 
 app.use(express.json());
+
+// Root endpoint for deployment verification
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Support Desk Backend API is running',
+    health: '/api/health',
+    version: '1.0.0',
+  });
+});
 
 // Clerk middleware (handles Clerk JWT session tokens when Clerk secret key is present)
 if (env.CLERK_SECRET_KEY) {
